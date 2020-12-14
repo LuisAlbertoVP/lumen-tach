@@ -11,6 +11,6 @@ class ModuloController extends Controller
     public function __construct() {}
 
     public function getAll() {
-        return Modulo::where('estado', 1)->get();
+        return Modulo::where('estado', 1)->orderBy('descripcion')->get();
     }
 }

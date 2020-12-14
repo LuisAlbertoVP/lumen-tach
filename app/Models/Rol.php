@@ -13,10 +13,12 @@ class Rol extends Model
     public $timestamps = false;
 
     public function usuarios() {
-        return $this->belongsToMany(User::class);
+        return $this->belongsToMany(User::class)->selectRaw('id, descripcion')
+            ->where('estado_tabla', 1)->where('estado', 1);
     }
 
     public function modulos() {
-        return $this->belongsToMany(Modulo::class);
+        return $this->belongsToMany(Modulo::class)->selectRaw('id, descripcion')
+            ->where('estado', 1);
     }
 }

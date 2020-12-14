@@ -16,15 +16,29 @@ class UsuarioController extends Controller
 
     public function login(Request $request) {
         $user = json_decode($request->getContent());
-        $user = User::with(['roles'])->selectRaw('id, nombre_usuario as nombreUsuario, nombres, estado')
+        $user = User::with(['roles', 'roles.modulos'])->selectRaw('id, nombre_usuario as nombreUsuario, nombres, estado')
             ->where('nombre_usuario', $user->nombreUsuario)->where('clave', $user->clave)->first();
         if($user) {
-            if($user->estado == 1) {
+            $user = $user->toArray();
+            if($user['estado'] == 1) {
                 $expiration = time() + (60*(60*12));
                 $payload = array("iss" => "localhost", "aud" => "localhost", "exp" => $expiration,
                     "data" => [ "id" => "luisv397" ]);
                 $jwt = JWT::encode($payload, env('TOKEN'));
-                $user->token = array('id' => $jwt, 'expiration' => $expiration);
+                $user['token'] = array('id' => $jwt, 'expiration' => $expiration);
+                $map = array();
+                foreach($user['roles'] as $rol) {
+                    foreach($rol['modulos'] as $modulo) {
+                        if(!array_key_exists($modulo['id'], $map)) {
+                            $map[$modulo['id']] = $modulo;
+                        }
+                    }
+                }
+                $modulos = array();
+                foreach($map as $key => $value) {
+                    array_push($modulos, $value);
+                }
+                $user['roles'] = array(array("modulos" => $modulos));
                 return $user;
             }
             return response('Usuario desactivado', 401);
