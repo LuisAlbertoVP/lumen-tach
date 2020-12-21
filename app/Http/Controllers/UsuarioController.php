@@ -16,29 +16,15 @@ class UsuarioController extends Controller
 
     public function login(Request $request) {
         $user = json_decode($request->getContent());
-        $user = User::with(['roles', 'roles.modulos'])->selectRaw('id, nombre_usuario as nombreUsuario, nombres, estado')
+        $user = User::selectRaw('id, nombre_usuario as nombreUsuario, nombres, estado')
             ->where('nombre_usuario', $user->nombreUsuario)->where('clave', $user->clave)->first();
         if($user) {
-            $user = $user->toArray();
-            if($user['estado'] == 1) {
+            if($user->estado == 1) {
                 $expiration = time() + (60*(60*12));
                 $payload = array("iss" => "localhost", "aud" => "localhost", "exp" => $expiration,
-                    "data" => [ "id" => "luisv397" ]);
+                    "data" => [ "id" => $user->id ]);
                 $jwt = JWT::encode($payload, env('TOKEN'));
-                $user['token'] = array('id' => $jwt, 'expiration' => $expiration);
-                $map = array();
-                foreach($user['roles'] as $rol) {
-                    foreach($rol['modulos'] as $modulo) {
-                        if(!array_key_exists($modulo['id'], $map)) {
-                            $map[$modulo['id']] = $modulo;
-                        }
-                    }
-                }
-                $modulos = array();
-                foreach($map as $key => $value) {
-                    array_push($modulos, $value);
-                }
-                $user['roles'] = array(array("modulos" => $modulos));
+                $user->token = array('id' => $jwt, 'expiration' => $expiration);
                 return $user;
             }
             return response('Usuario desactivado', 401);
@@ -46,37 +32,58 @@ class UsuarioController extends Controller
         return response('Las credenciales de acceso son incorrectas', 403);
     }
 
+    public function getRolUser($id) {
+        return User::with(['roles', 'roles.modulos'])->selectRaw('id')->where('id', $id)->first();
+    }
+
+    private function applyFilter($query, $filtro) {
+        if($filtro['condicion'] != 'between') {
+            $query->where($filtro['columna'], $filtro['condicion'], $filtro['criterio1']); 
+        } else {
+            $query->whereBetween($filtro['columna'], array($filtro['criterio1'], $filtro['criterio2'])); 
+        }
+    }
+
+    private function forFilters($query, $filtros) {
+        foreach($filtros as $filtro) {
+            $this->applyFilter($query, $filtro); 
+        }
+    }
+
     public function getAll(Request $request) {
-        $condition = $request->criterio2 ? ' between ? and ?' : ' like ?';
-        $filtro = $request->filtro.$condition;
-        $criterio = $request->criterio2 ? array($request->criterio1, $request->criterio2) : array('%'.$request->criterio1.'%');
         $estado = $request->estado == 2 ? array(0, 1) : array($request->estado);
+        $condition = function($query) use($request) { $this->forFilters($query, $request->filtros); };
         $user = array(
             'usuarios' => User::with(['roles'])->selectRaw('id, nombre_usuario as nombreUsuario, nombres, cedula, direccion, telefono,'. 
-                'celular, fecha_nacimiento as fechaNacimiento, correo, fecha_contratacion as fechaContratacion, salario, estado,'. 
-                'usr_ing as usrIngreso, fec_ing as fecIngreso, usr_mod as usrModificacion, fec_mod as fecModificacion')
-                ->where('estado_tabla', 1)->whereIn('estado', $estado)->whereRaw($filtro, $criterio)->orderBy($request->orden, $request->direccion)
+                    'celular, fecha_nacimiento as fechaNacimiento, correo, fecha_contratacion as fechaContratacion, salario, estado,'. 
+                    'usr_ing as usrIngreso, fec_ing as fecIngreso, usr_mod as usrModificacion, fec_mod as fecModificacion')
+                ->where('estado_tabla', 1)->whereIn('estado', $estado)->where($condition)
+                ->orderBy($request->orden['activo'], $request->orden['direccion'])
                 ->skip($request->pagina*$request->cantidad)->take($request->cantidad)->get(),
-            'total' => User::where('estado_tabla', 1)->whereRaw($filtro, $criterio)->whereIn('estado', $estado)->count()
+            'total' => User::where('estado_tabla', 1)->whereIn('estado', $estado)->where($condition)->count()
         );
         return $user;
     }
 
     public function getById(Request $request, $id) {
         return array(
-            "usuario" => $id != 'nuevo' ? User::with(['roles'])->selectRaw('id, nombre_usuario as nombreUsuario, nombres, cedula, direccion, telefono,'. 
-                'celular, fecha_nacimiento as fechaNacimiento, correo, fecha_contratacion as fechaContratacion, salario')
+            "usuario" => $id != 'nuevo' ? User::with(['roles'])->selectRaw('id, nombre_usuario as nombreUsuario, nombres, cedula, direccion,' .
+                    'telefono, celular, fecha_nacimiento as fechaNacimiento, correo, fecha_contratacion as fechaContratacion, salario')
                 ->where('estado_tabla', 1)->where('id', $id)->first() : null,
             "roles" => Rol::selectRaw('id, descripcion')->where('estado_tabla', 1)->where('estado', 1)->get()
         );
     }
 
     public function insertOrUpdate(Request $request) {
-        $json = $request->getContent();
-        $usuario = json_decode($json, true);
-        Permiso::where('id', $usuario->id)->whereNotIn('rol_id', $usuario->roles)->delete();
-        DB::select('CALL AddUsuario(?)', [$json]);
-        return response()->json('Usuario actualizado correctamente', 200);
+        DB::beginTransaction();
+        try{
+            DB::select('CALL AddUsuario(?)', [$request->getContent()]);
+            DB::commit();
+            return response()->json('Usuario actualizado correctamente', 200);
+        } catch(\Exception $ex) {
+            DB::rollBack();
+            return response()->json('Usuario no actualizado', 500);
+        }
     }
 
     public function setStatus(Request $request, $id) {

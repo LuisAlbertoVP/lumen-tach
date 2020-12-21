@@ -18,7 +18,6 @@ class Rol extends Model
     }
 
     public function modulos() {
-        return $this->belongsToMany(Modulo::class)->selectRaw('id, descripcion')
-            ->where('estado', 1);
+        return $this->belongsToMany(Modulo::class)->selectRaw('id, descripcion');
     }
 }

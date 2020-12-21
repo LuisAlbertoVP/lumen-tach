@@ -11,33 +11,49 @@ class RolController extends Controller
 {
     public function __construct() {}
 
+    private function applyFilter($query, $filtro) {
+        if($filtro['condicion'] != 'between') {
+            $query->where($filtro['columna'], $filtro['condicion'], $filtro['criterio1']); 
+        } else {
+            $query->whereBetween($filtro['columna'], array($filtro['criterio1'], $filtro['criterio2'])); 
+        }
+    }
+
+    private function forFilters($query, $filtros) {
+        foreach($filtros as $filtro) {
+            $this->applyFilter($query, $filtro); 
+        }
+    }
+
     public function getAll(Request $request) {
-        $condition = $request->criterio2 ? ' between ? and ?' : ' like ?';
-        $filtro = $request->filtro.$condition;
-        $criterio = $request->criterio2 ? array($request->criterio1, $request->criterio2) : array('%'.$request->criterio1.'%');
         $estado = $request->estado == 2 ? array(0, 1) : array($request->estado);
+        $condition = function($query) use($request) { $this->forFilters($query, $request->filtros); };
         $rol = array(
             'roles' => Rol::with(['modulos'])->selectRaw('id, descripcion, estado, usr_ing as usrIngreso, fec_ing as fecIngreso,'.
-                'usr_mod as usrModificacion, fec_mod as fecModificacion')
-                ->where('estado_tabla', 1)->whereIn('estado', $estado)->whereRaw($filtro, $criterio)->orderBy($request->orden, $request->direccion)
+                    'usr_mod as usrModificacion, fec_mod as fecModificacion')
+                ->where('estado_tabla', 1)->whereIn('estado', $estado)->where($condition)
+                ->orderBy($request->orden['activo'], $request->orden['direccion'])
                 ->skip($request->pagina*$request->cantidad)->take($request->cantidad)->get(),
-            'total' => Rol::where('estado_tabla', 1)->whereRaw($filtro, $criterio)->whereIn('estado', $estado)->count()
+            'total' => Rol::where('estado_tabla', 1)->whereIn('estado', $estado)->where($condition)->count()
         );
         return $rol;
     }
 
     public function getById(Request $request, $id) {
-        return array(
-            "rol" => $id != 'nuevo' ? Rol::with(['modulos'])->selectRaw('id, descripcion')
-                ->where('estado_tabla', 1)->where('id', $id)->first() : null,
-            "modulos" => Modulo::selectRaw('id, descripcion')->where('estado', 1)->get()
-        );
+        return $id != 'nuevo' ? Rol::with(['modulos'])->selectRaw('id, descripcion')
+            ->where('estado_tabla', 1)->where('id', $id)->first() : null;
     }
 
     public function insertOrUpdate(Request $request) {
-        $json = $request->getContent();
-        DB::select('CALL AddRol(?)', [$json]);
-        return response()->json('Rol actualizado correctamente', 200);
+        DB::beginTransaction();
+        try{
+            DB::select('CALL AddRol(?)', [$request->getContent()]);
+            DB::commit();
+            return response()->json('Rol actualizado correctamente', 200);
+        } catch(\Exception $ex) {
+            DB::rollBack();
+            return response()->json('Rol no actualizado', 500);
+        }
     }
 
     public function setStatus(Request $request, $id) {
