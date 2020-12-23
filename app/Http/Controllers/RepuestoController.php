@@ -39,33 +39,38 @@ class RepuestoController extends Controller
         }
     }
 
+    private function sortRelations($sort) {
+        switch($sort) {
+            case 'categoria': return Categoria::select('descripcion')->whereColumn('categoria.id', 'repuesto.categoria_id');
+            case 'marca': return Marca::select('descripcion')->whereColumn('marca.id', 'repuesto.marca_id');
+            default: return $sort;
+        }
+    }
+
     public function getAll(Request $request) {
         $estado = $request->estado == 2 ? array(0, 1) : array($request->estado);
         $condition = function($query) use($request) { $this->forFilters($query, $request->filtros); };
+        $sort = $this->sortRelations($request->orden['activo']);
         $repuesto = array(
             "repuestos" => Repuesto::with(['marca', 'categoria'])->selectRaw('id, codigo, modelo, fecha, stock, precio, descripcion, estado, marca_id, categoria_id,'.
                     'usr_ing as usrIngreso, fec_ing as fecIngreso, usr_mod as usrModificacion, fec_mod as fecModificacion')
                 ->where('estado_tabla', 1)->whereIn('estado', $estado)->where($condition)
-                ->orderBy($request->orden['activo'], $request->orden['direccion'])
+                ->orderBy($sort, $request->orden['direccion'])
                 ->skip($request->pagina*$request->cantidad)->take($request->cantidad)->get(),
             "total" => Repuesto::where('estado_tabla', 1)->whereIn('estado', $estado)->where($condition)->count()
         );
         return $repuesto;
     }
 
-    public function getById(Request $request, $id) {
+    public function getForm(Request $request) {
         return array(
-            "repuesto" => $id != 'nuevo' ? Repuesto::with(['marca', 'categoria'])->selectRaw('id, codigo, modelo, fecha, stock, precio, descripcion, marca_id,'. 
-                    'categoria_id, estado, usr_ing as usrIngreso, fec_ing as fecIngreso, usr_mod as usrModificacion, fec_mod as fecModificacion')
-                ->where('estado_tabla', 1)->where('estado', 1)->where('id', $id)->first() : null,
-            "marcas" => Marca::selectRaw('id, descripcion')->where('estado_tabla', 1)->where('estado', 1)->get(),
-            "categorias" => Categoria::selectRaw('id, descripcion')->where('estado_tabla', 1)->where('estado', 1)->get()
+            "marcas" => Marca::selectRaw('id, descripcion')->where('estado_tabla', 1)->where('estado', 1)->orderBy('descripcion', 'asc')->get(),
+            "categorias" => Categoria::selectRaw('id, descripcion')->where('estado_tabla', 1)->where('estado', 1)->orderBy('descripcion', 'asc')->get()
         );
     }
 
     public function insertOrUpdate(Request $request) {
-        $json = $request->getContent();
-        DB::select('CALL AddRepuesto(?)', [$json]);
+        DB::connection()->getPdo()->prepare('CALL AddRepuesto(?)')->execute([$request->getContent()]);
         return response()->json('Repuesto actualizado correctamente', 200);
     }
 

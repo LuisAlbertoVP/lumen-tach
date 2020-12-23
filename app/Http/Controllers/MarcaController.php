@@ -39,8 +39,7 @@ class MarcaController extends Controller
     }
 
     public function insertOrUpdate(Request $request) {
-        $json = $request->getContent();
-        DB::select('CALL AddMarca(?)', [$json]);
+        DB::connection()->getPdo()->prepare('CALL AddMarca(?)')->execute([$request->getContent()]);
         return response()->json('Marca actualizada correctamente', 200);
     }
 

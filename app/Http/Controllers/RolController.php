@@ -39,15 +39,10 @@ class RolController extends Controller
         return $rol;
     }
 
-    public function getById(Request $request, $id) {
-        return $id != 'nuevo' ? Rol::with(['modulos'])->selectRaw('id, descripcion')
-            ->where('estado_tabla', 1)->where('id', $id)->first() : null;
-    }
-
     public function insertOrUpdate(Request $request) {
         DB::beginTransaction();
         try{
-            DB::select('CALL AddRol(?)', [$request->getContent()]);
+            DB::connection()->getPdo()->prepare('CALL AddRol(?)')->execute([$request->getContent()]);
             DB::commit();
             return response()->json('Rol actualizado correctamente', 200);
         } catch(\Exception $ex) {

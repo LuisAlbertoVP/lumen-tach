@@ -47,8 +47,7 @@ class ProveedorController extends Controller
     }
 
     public function insertOrUpdate(Request $request) {
-        $json = $request->getContent();
-        DB::select('CALL AddProveedor(?)', [$json]);
+        DB::connection()->getPdo()->prepare('CALL AddProveedor(?)')->execute([$request->getContent()]);
         return response()->json('Proveedor actualizado correctamente', 200);
     }
 

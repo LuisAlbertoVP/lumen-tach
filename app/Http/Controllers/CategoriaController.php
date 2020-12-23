@@ -39,8 +39,7 @@ class CategoriaController extends Controller
     }
 
     public function insertOrUpdate(Request $request) {
-        $json = $request->getContent();
-        DB::select('CALL AddCategoria(?)', [$json]);
+        DB::connection()->getPdo()->prepare('CALL AddCategoria(?)')->execute([$request->getContent()]);
         return response()->json('Categoría actualizada correctamente', 200);
     }
 

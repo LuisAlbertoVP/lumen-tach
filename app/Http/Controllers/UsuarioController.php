@@ -65,19 +65,16 @@ class UsuarioController extends Controller
         return $user;
     }
 
-    public function getById(Request $request, $id) {
+    public function getForm(Request $request) {
         return array(
-            "usuario" => $id != 'nuevo' ? User::with(['roles'])->selectRaw('id, nombre_usuario as nombreUsuario, nombres, cedula, direccion,' .
-                    'telefono, celular, fecha_nacimiento as fechaNacimiento, correo, fecha_contratacion as fechaContratacion, salario')
-                ->where('estado_tabla', 1)->where('id', $id)->first() : null,
-            "roles" => Rol::selectRaw('id, descripcion')->where('estado_tabla', 1)->where('estado', 1)->get()
+            "roles" => Rol::selectRaw('id, descripcion')->where('estado_tabla', 1)->where('estado', 1)->orderBy('descripcion', 'asc')->get()
         );
     }
 
     public function insertOrUpdate(Request $request) {
         DB::beginTransaction();
         try{
-            DB::select('CALL AddUsuario(?)', [$request->getContent()]);
+            DB::connection()->getPdo()->prepare('CALL AddUsuario(?)')->execute([$request->getContent()]);
             DB::commit();
             return response()->json('Usuario actualizado correctamente', 200);
         } catch(\Exception $ex) {

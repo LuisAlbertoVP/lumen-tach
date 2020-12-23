@@ -1,15 +1,15 @@
 <?php
 
 $router->post('api/login', 'UsuarioController@login');
+$router->post('api/usuarios/request', 'UsuarioController@insert');
 
 $router->group(['middleware' => 'auth'], function () use ($router) {
     $router->get('api/usuarios/{id}/roles', 'UsuarioController@getRolUser');
-    $router->get('api/usuarios/{id}', 'UsuarioController@getById');
+    $router->get('api/usuarios/form', 'UsuarioController@getForm');
     $router->post('api/usuarios/all', 'UsuarioController@getAll');
     $router->post('api/usuarios/{id}', 'UsuarioController@setStatus');
     $router->post('api/usuarios', 'UsuarioController@insertOrUpdate');
     $router->delete('api/usuarios/{id}', 'UsuarioController@delete');
-    $router->get('api/roles/{id}', 'RolController@getById');
     $router->post('api/roles/all', 'RolController@getAll');
     $router->post('api/roles/{id}', 'RolController@setStatus');
     $router->post('api/roles', 'RolController@insertOrUpdate');
@@ -27,7 +27,7 @@ $router->group(['middleware' => 'auth'], function () use ($router) {
     $router->post('api/categorias/{id}', 'CategoriaController@setStatus');
     $router->post('api/categorias', 'CategoriaController@insertOrUpdate');
     $router->delete('api/categorias/{id}', 'CategoriaController@delete');
-    $router->get('api/repuestos/{id}', 'RepuestoController@getById');
+    $router->get('api/repuestos/form', 'RepuestoController@getForm');
     $router->post('api/repuestos/all', 'RepuestoController@getAll');
     $router->post('api/repuestos/{id}', 'RepuestoController@setStatus');
     $router->post('api/repuestos', 'RepuestoController@insertOrUpdate');
