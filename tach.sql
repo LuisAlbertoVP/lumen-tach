@@ -111,7 +111,7 @@ begin
     declare _fecha varchar(20) default json_unquote(json_extract(json, '$.fecha'));
     declare _stock int default json_unquote(json_extract(json, '$.stock'));
     declare _precio double default json_unquote(json_extract(json, '$.precio'));
-    declare _descripcion varchar(100) default json_unquote(json_extract(json, '$.descripcion'));
+    declare _descripcion varchar(300) default json_unquote(json_extract(json, '$.descripcion'));
     declare _usr_ing varchar(50) default json_unquote(json_extract(json, '$.usrIngreso'));
     declare _usr_mod varchar(50) default json_unquote(json_extract(json, '$.usrModificacion'));
     insert into repuesto values(_id, _codigo, _marca_id, _categoria_id, _modelo, _fecha, _stock, _precio, _descripcion, 1, 1, 

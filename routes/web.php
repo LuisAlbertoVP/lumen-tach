@@ -14,7 +14,6 @@ $router->group(['middleware' => 'auth'], function () use ($router) {
     $router->post('api/roles/{id}', 'RolController@setStatus');
     $router->post('api/roles', 'RolController@insertOrUpdate');
     $router->delete('api/roles/{id}', 'RolController@delete');
-    $router->get('api/proveedores/{id}', 'ProveedorController@getById');
     $router->post('api/proveedores/all', 'ProveedorController@getAll');
     $router->post('api/proveedores/{id}', 'ProveedorController@setStatus');
     $router->post('api/proveedores', 'ProveedorController@insertOrUpdate');

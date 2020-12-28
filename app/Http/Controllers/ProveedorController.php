@@ -11,10 +11,12 @@ class ProveedorController extends Controller
     public function __construct() {}
 
     private function applyFilter($query, $filtro) {
-        if($filtro['condicion'] != 'between') {
-            $query->where($filtro['columna'], $filtro['condicion'], $filtro['criterio1']); 
-        } else {
+        if($filtro['condicion'] == 'between') {
             $query->whereBetween($filtro['columna'], array($filtro['criterio1'], $filtro['criterio2'])); 
+        } else if($filtro['condicion'] == 'multiple') {
+            $query->whereIn($filtro['columna'], $filtro['criterios']); 
+        } else {
+            $query->where($filtro['columna'], $filtro['condicion'], $filtro['criterio1']);
         }
     }
 
@@ -26,29 +28,29 @@ class ProveedorController extends Controller
 
     public function getAll(Request $request) {
         $estado = $request->estado == 2 ? array(0, 1) : array($request->estado);
-        $condition = function($query) use($request) { $this->forFilters($query, $request->filtros); };
+        $condicion = function($query) use($request) { $this->forFilters($query, $request->filtros); };
         $proveedores = array(
             'proveedores' => Proveedor::selectRaw('id, descripcion, convenio, telefono, direccion, tipo_proveedor as tipoProveedor,'.
                     'contacto, telefono_contacto as telefonoContacto, correo_contacto as correoContacto, estado, usr_ing as usrIngreso,'. 
                     'fec_ing as fecIngreso, usr_mod as usrModificacion, fec_mod as fecModificacion')
-                ->where('estado_tabla', 1)->whereIn('estado', $estado)->where($condition)
+                ->where('estado_tabla', 1)->whereIn('estado', $estado)->where($condicion)
                 ->orderBy($request->orden['activo'], $request->orden['direccion'])
                 ->skip($request->pagina*$request->cantidad)->take($request->cantidad)->get(),
-            'total' => Proveedor::where('estado_tabla', 1)->whereIn('estado', $estado)->where($condition)->count()
+            'total' => Proveedor::where('estado_tabla', 1)->whereIn('estado', $estado)->where($condicion)->count()
         );
         return $proveedores;
     }
 
-    public function getById(Request $request, $id) {
-        return $id != 'nuevo' ? Proveedor::selectRaw('id, descripcion, convenio, telefono, direccion, tipo_proveedor as tipoProveedor,'.
-                'contacto, telefono_contacto as telefonoContacto, correo_contacto as correoContacto, estado, usr_ing as usrIngreso,'. 
-                'fec_ing as fecIngreso, usr_mod as usrModificacion, fec_mod as fecModificacion')
-            ->where('estado_tabla', 1)->where('id', $id)->first() : null;
-    }
-
     public function insertOrUpdate(Request $request) {
-        DB::connection()->getPdo()->prepare('CALL AddProveedor(?)')->execute([$request->getContent()]);
-        return response()->json('Proveedor actualizado correctamente', 200);
+        DB::beginTransaction();
+        try {
+            DB::connection()->getPdo()->prepare('CALL AddProveedor(?)')->execute([$request->getContent()]);
+            DB::commit();
+            return response()->json('Proveedor actualizado correctamente', 200);
+        } catch(\Exception $ex) {
+            DB::rollBack();
+            return response()->json('Proveedor no actualizado', 500);
+        }
     }
 
     public function setStatus(Request $request, $id) {

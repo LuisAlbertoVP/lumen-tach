@@ -12,24 +12,23 @@ class RepuestoController extends Controller
 {
     public function __construct() {}
 
-    private function isRelation($filtro) {
-        return $filtro == 'proveedor' || $filtro == 'marca' || $filtro == 'categoria';
+    private function applyCondition($query, $filtro, $isRelation = false) {
+        $column = $isRelation ? 'descripcion' : $filtro['columna'];
+        if($filtro['condicion'] == 'between') {
+            $query->whereBetween($column, array($filtro['criterio1'], $filtro['criterio2'])); 
+        } else if($filtro['condicion'] == 'multiple') {
+            $query->whereIn($column, $filtro['criterios']); 
+        } else {
+            $query->where($column, $filtro['condicion'], $filtro['criterio1']);
+        }
     }
 
     private function applyFilter($query, $filtro) {
         if($filtro['isRelation']) {
-            if($filtro['condicion'] != 'between') {
-                $condicion = function($query) use($filtro) { $query->where('descripcion', $filtro['condicion'], $filtro['criterio1']); };
-            } else {
-                $condicion = function($query) use($filtro) { $query->whereBetween('descripcion', array($filtro['criterio1'], $filtro['criterio2'])); };
-            }
+            $condicion = function($query) use($filtro) { $this->applyCondition($query, $filtro, true); };
             $query->whereHas($filtro['columna'], $condicion);
         } else {
-            if($filtro['condicion'] != 'between') {
-                $query->where($filtro['columna'], $filtro['condicion'], $filtro['criterio1']); 
-            } else {
-                $query->whereBetween($filtro['columna'], array($filtro['criterio1'], $filtro['criterio2'])); 
-            }
+            $this->applyCondition($query, $filtro);
         }
     }
 
@@ -49,15 +48,15 @@ class RepuestoController extends Controller
 
     public function getAll(Request $request) {
         $estado = $request->estado == 2 ? array(0, 1) : array($request->estado);
-        $condition = function($query) use($request) { $this->forFilters($query, $request->filtros); };
+        $condicion = function($query) use($request) { $this->forFilters($query, $request->filtros); };
         $sort = $this->sortRelations($request->orden['activo']);
         $repuesto = array(
             "repuestos" => Repuesto::with(['marca', 'categoria'])->selectRaw('id, codigo, modelo, fecha, stock, precio, descripcion, estado, marca_id, categoria_id,'.
                     'usr_ing as usrIngreso, fec_ing as fecIngreso, usr_mod as usrModificacion, fec_mod as fecModificacion')
-                ->where('estado_tabla', 1)->whereIn('estado', $estado)->where($condition)
+                ->where('estado_tabla', 1)->whereIn('estado', $estado)->where($condicion)
                 ->orderBy($sort, $request->orden['direccion'])
                 ->skip($request->pagina*$request->cantidad)->take($request->cantidad)->get(),
-            "total" => Repuesto::where('estado_tabla', 1)->whereIn('estado', $estado)->where($condition)->count()
+            "total" => Repuesto::where('estado_tabla', 1)->whereIn('estado', $estado)->where($condicion)->count()
         );
         return $repuesto;
     }
@@ -70,8 +69,15 @@ class RepuestoController extends Controller
     }
 
     public function insertOrUpdate(Request $request) {
-        DB::connection()->getPdo()->prepare('CALL AddRepuesto(?)')->execute([$request->getContent()]);
-        return response()->json('Repuesto actualizado correctamente', 200);
+        DB::beginTransaction();
+        try {
+            DB::connection()->getPdo()->prepare('CALL AddRepuesto(?)')->execute([$request->getContent()]);
+            DB::commit();
+            return response()->json('Repuesto actualizado correctamente', 200);
+        } catch(\Exception $ex) {
+            DB::rollBack();
+            return response()->json('Repuesto no actualizado', 500);
+        }
     }
 
     public function setStatus(Request $request, $id) {
