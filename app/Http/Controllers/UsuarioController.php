@@ -5,32 +5,11 @@ namespace App\Http\Controllers;
 use DB;
 use App\Models\User;
 use App\Models\Rol;
-use App\Models\Permiso;
-use Firebase\JWT\JWT;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 
 class UsuarioController extends Controller
 {
     public function __construct() {}
-
-    public function login(Request $request) {
-        $user = json_decode($request->getContent());
-        $user = User::selectRaw('id, nombre_usuario as nombreUsuario, nombres, estado')
-            ->where('nombre_usuario', $user->nombreUsuario)->where('clave', $user->clave)->first();
-        if($user) {
-            if($user->estado == 1) {
-                $expiration = time() + (60*(60*12));
-                $payload = array("iss" => "localhost", "aud" => "localhost", "exp" => $expiration,
-                    "data" => [ "id" => $user->id ]);
-                $jwt = JWT::encode($payload, env('TOKEN'));
-                $user->token = array('id' => $jwt, 'expiration' => $expiration);
-                return $user;
-            }
-            return response('Usuario desactivado', 401);
-        }
-        return response('Las credenciales de acceso son incorrectas', 403);
-    }
 
     public function getRolUser($id) {
         return User::with(['roles', 'roles.modulos'])->selectRaw('id')->where('id', $id)->first();
