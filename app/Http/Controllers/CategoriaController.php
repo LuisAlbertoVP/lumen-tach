@@ -12,11 +12,11 @@ class CategoriaController extends Controller
 
     private function applyFilter($query, $filtro) {
         if($filtro['condicion'] == 'between') {
-            $query->whereBetween($filtro['columna'], array($filtro['criterio1'], $filtro['criterio2'])); 
+            $query->whereBetween($filtro['id'], array($filtro['criterio1'], $filtro['criterio2'])); 
         } else if($filtro['condicion'] == 'multiple') {
-            $query->whereIn($filtro['columna'], $filtro['criterios']); 
+            $query->whereIn($filtro['id'], $filtro['criterios']); 
         } else {
-            $query->where($filtro['columna'], $filtro['condicion'], $filtro['criterio1']);
+            $query->where($filtro['id'], $filtro['condicion'], $filtro['criterio1']);
         }
     }
 
@@ -56,7 +56,7 @@ class CategoriaController extends Controller
         $categoria = json_decode($request->getContent());
         $status = Categoria::where('id', $id)->update(['estado' => $categoria->estado]);
         if($status == 1)
-            return response()->json($categoria->estado == 1 ? 'Categoría habilitada' : 'Categoría deshabilitada', 200);
+            return response()->json($categoria->estado ? 'Categoría habilitada' : 'Categoría deshabilitada', 200);
         return response()->json('No se han guardado los cambios', 500);
     }
 

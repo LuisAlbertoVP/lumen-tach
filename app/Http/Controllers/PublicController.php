@@ -17,7 +17,7 @@ class PublicController extends Controller
         $user = User::selectRaw('id, nombre_usuario as nombreUsuario, nombres, estado')
             ->where('nombre_usuario', $user->nombreUsuario)->where('clave', $user->clave)->first();
         if($user) {
-            if($user->estado == 1) {
+            if($user->estado) {
                 $expiration = time() + (60*(60*12));
                 $payload = array("iss" => "localhost", "aud" => "localhost", "exp" => $expiration,
                     "data" => [ "id" => $user->id ]);

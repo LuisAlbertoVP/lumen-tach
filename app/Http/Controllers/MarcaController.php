@@ -12,11 +12,11 @@ class MarcaController extends Controller
 
     private function applyFilter($query, $filtro) {
         if($filtro['condicion'] == 'between') {
-            $query->whereBetween($filtro['columna'], array($filtro['criterio1'], $filtro['criterio2'])); 
+            $query->whereBetween($filtro['id'], array($filtro['criterio1'], $filtro['criterio2'])); 
         } else if($filtro['condicion'] == 'multiple') {
-            $query->whereIn($filtro['columna'], $filtro['criterios']); 
+            $query->whereIn($filtro['id'], $filtro['criterios']); 
         } else {
-            $query->where($filtro['columna'], $filtro['condicion'], $filtro['criterio1']);
+            $query->where($filtro['id'], $filtro['condicion'], $filtro['criterio1']);
         }
     }
 
@@ -56,7 +56,7 @@ class MarcaController extends Controller
         $marca = json_decode($request->getContent());
         $status = Marca::where('id', $id)->update(['estado' => $marca->estado]);
         if($status == 1)
-            return response()->json($marca->estado == 1 ? 'Marca habilitada' : 'Marca deshabilitada', 200);
+            return response()->json($marca->estado ? 'Marca habilitada' : 'Marca deshabilitada', 200);
         return response()->json('No se han guardado los cambios', 500);
     }
 

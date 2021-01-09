@@ -17,11 +17,11 @@ class UsuarioController extends Controller
 
     private function applyFilter($query, $filtro) {
         if($filtro['condicion'] == 'between') {
-            $query->whereBetween($filtro['columna'], array($filtro['criterio1'], $filtro['criterio2'])); 
+            $query->whereBetween($filtro['id'], array($filtro['criterio1'], $filtro['criterio2'])); 
         } else if($filtro['condicion'] == 'multiple') {
-            $query->whereIn($filtro['columna'], $filtro['criterios']); 
+            $query->whereIn($filtro['id'], $filtro['criterios']); 
         } else {
-            $query->where($filtro['columna'], $filtro['condicion'], $filtro['criterio1']);
+            $query->where($filtro['id'], $filtro['condicion'], $filtro['criterio1']);
         }
     }
 
@@ -68,7 +68,7 @@ class UsuarioController extends Controller
         $user = json_decode($request->getContent());
         $status = User::where('id', $id)->update(['estado' => $user->estado]);
         if($status == 1)
-            return response()->json($user->estado == 1 ? 'Usuario habilitado' : 'Usuario deshabilitado', 200);
+            return response()->json($user->estado ? 'Usuario habilitado' : 'Usuario deshabilitado', 200);
         return response()->json('No se han guardado los cambios', 500);
     }
 

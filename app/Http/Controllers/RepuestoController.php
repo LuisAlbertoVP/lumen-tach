@@ -13,7 +13,7 @@ class RepuestoController extends Controller
     public function __construct() {}
 
     private function applyCondition($query, $filtro, $isRelation = false) {
-        $column = $isRelation ? 'descripcion' : $filtro['columna'];
+        $column = $isRelation ? 'descripcion' : $filtro['id'];
         if($filtro['condicion'] == 'between') {
             $query->whereBetween($column, array($filtro['criterio1'], $filtro['criterio2'])); 
         } else if($filtro['condicion'] == 'multiple') {
@@ -26,7 +26,7 @@ class RepuestoController extends Controller
     private function applyFilter($query, $filtro) {
         if($filtro['isRelation']) {
             $condicion = function($query) use($filtro) { $this->applyCondition($query, $filtro, true); };
-            $query->whereHas($filtro['columna'], $condicion);
+            $query->whereHas($filtro['id'], $condicion);
         } else {
             $this->applyCondition($query, $filtro);
         }
@@ -84,7 +84,7 @@ class RepuestoController extends Controller
         $repuesto = json_decode($request->getContent());
         $status = Repuesto::where('id', $id)->update(['estado' => $repuesto->estado]);
         if($status == 1)
-            return response()->json($repuesto->estado == 1 ? 'Repuesto habilitado' : 'Repuesto deshabilitado', 200);
+            return response()->json($repuesto->estado ? 'Repuesto habilitado' : 'Repuesto deshabilitado', 200);
         return response()->json('No se han guardado los cambios', 500);
     }
 

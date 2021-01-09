@@ -13,11 +13,11 @@ class RolController extends Controller
 
     private function applyFilter($query, $filtro) {
         if($filtro['condicion'] == 'between') {
-            $query->whereBetween($filtro['columna'], array($filtro['criterio1'], $filtro['criterio2'])); 
+            $query->whereBetween($filtro['id'], array($filtro['criterio1'], $filtro['criterio2'])); 
         } else if($filtro['condicion'] == 'multiple') {
-            $query->whereIn($filtro['columna'], $filtro['criterios']); 
+            $query->whereIn($filtro['id'], $filtro['criterios']); 
         } else {
-            $query->where($filtro['columna'], $filtro['condicion'], $filtro['criterio1']);
+            $query->where($filtro['id'], $filtro['condicion'], $filtro['criterio1']);
         }
     }
 
@@ -57,7 +57,7 @@ class RolController extends Controller
         $rol = json_decode($request->getContent());
         $status = Rol::where('id', $id)->update(['estado' => $rol->estado]);
         if($status == 1)
-            return response()->json($rol->estado == 1 ? 'Rol habilitado' : 'Rol deshabilitado', 200);
+            return response()->json($rol->estado ? 'Rol habilitado' : 'Rol deshabilitado', 200);
         return response()->json('No se han guardado los cambios', 500);
     }
 

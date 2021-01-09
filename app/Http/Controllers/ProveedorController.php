@@ -12,11 +12,11 @@ class ProveedorController extends Controller
 
     private function applyFilter($query, $filtro) {
         if($filtro['condicion'] == 'between') {
-            $query->whereBetween($filtro['columna'], array($filtro['criterio1'], $filtro['criterio2'])); 
+            $query->whereBetween($filtro['id'], array($filtro['criterio1'], $filtro['criterio2'])); 
         } else if($filtro['condicion'] == 'multiple') {
-            $query->whereIn($filtro['columna'], $filtro['criterios']); 
+            $query->whereIn($filtro['id'], $filtro['criterios']); 
         } else {
-            $query->where($filtro['columna'], $filtro['condicion'], $filtro['criterio1']);
+            $query->where($filtro['id'], $filtro['condicion'], $filtro['criterio1']);
         }
     }
 
@@ -57,7 +57,7 @@ class ProveedorController extends Controller
         $proveedor = json_decode($request->getContent());
         $status = Proveedor::where('id', $id)->update(['estado' => $proveedor->estado]);
         if($status == 1)
-            return response()->json($proveedor->estado == 1 ? 'Proveedor habilitado' : 'Proveedor deshabilitado', 200);
+            return response()->json($proveedor->estado ? 'Proveedor habilitado' : 'Proveedor deshabilitado', 200);
         return response()->json('No se han guardado los cambios', 500);
     }
 
