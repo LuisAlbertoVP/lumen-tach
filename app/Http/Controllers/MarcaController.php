@@ -30,7 +30,7 @@ class MarcaController extends Controller
         $estado = $request->estado == 2 ? array(0, 1) : array($request->estado);
         $condicion = function($query) use($request) { $this->forFilters($query, $request->filtros); };
         $marcas = array(
-            'marcas' => Marca::selectRaw('id, descripcion, estado, usr_ing as usrIngreso, fec_ing as fecIngreso, '.
+            'marcas' => Marca::withCount(['repuestos as stock'])->selectRaw('id, descripcion, estado, usr_ing as usrIngreso, fec_ing as fecIngreso, '.
                     'usr_mod as usrModificacion, fec_mod as fecModificacion')
                 ->where('estado_tabla', 1)->whereIn('estado', $estado)->where($condicion)
                 ->orderBy($request->orden['activo'], $request->orden['direccion'])
